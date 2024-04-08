@@ -31,7 +31,7 @@ endif()
 
 set(HE_BINARY_DIRECTORY ${EXCHANGE_PACKAGE_PATH}/bin/${HE_BINARY_DIRECTORY_NAME})
 
-add_executable(MeshViewer main.cpp rendering.cpp externals/glad.c)
+add_executable(MeshViewer main.cpp interface.cpp ogl_rendering.cpp externals/glad.c)
 target_include_directories(MeshViewer PRIVATE 
     "${EXCHANGE_PACKAGE_PATH}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/externals"
