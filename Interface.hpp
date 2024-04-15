@@ -19,7 +19,7 @@
 // Represents a drawable object in the GPU.
 // Created from an `A3DMeshData` instance during `he_mesh_data_to_opengl()`.
 struct MeshObject {
-    mat4x4  mat_transform_model;  // Transformation matrix for the object.
+    mat4x4  matrix_position;  // Position of the object.
     A3DMeshData mesh;
     vec4 color;
 };
@@ -36,4 +36,4 @@ struct TraverseData {
 // OpenGL Inteface
 // Prepare data before sending to OpenGL (buffers creation) 
 std::pair<GLuint, GLsizei> ogl_mesh_data_to_rendering(A3DMeshData const mesh_data);
-void send_to_openGL(TraverseData data_traverse);
+void send_to_openGL(TraverseData traverse_data);

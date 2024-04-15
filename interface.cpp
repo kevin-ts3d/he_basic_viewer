@@ -1,6 +1,6 @@
 #include "interface.hpp"
 
-void send_to_openGL(TraverseData data_traverse)
+void send_to_openGL(TraverseData traverse_data)
 {
 
     ///////////////////////////
@@ -12,21 +12,21 @@ void send_to_openGL(TraverseData data_traverse)
     GLuint      program = ogl_rendering_prepare();
     
     //Adapt data to OpenGL
-    oglTraverseData ogl_data_traverse;
-    for (int i = 0; i < data_traverse.objects.size(); i++)
+    oglTraverseData ogl_traverse_data;
+    for (int i = 0; i < traverse_data.objects.size(); i++)
     {
         oglSceneObject object;
 
-        auto pair = ogl_mesh_data_to_rendering(data_traverse.objects[i].mesh);
+        auto pair = ogl_mesh_data_to_rendering(traverse_data.objects[i].mesh);
         object.gl_vao = pair.first;
         object.gl_indices_count = pair.second;
-        mat4x4_dup(object.mat_transform_model, data_traverse.objects[i].mat_transform_model);
-        vec4_dup(object.color, data_traverse.objects[i].color);
+        mat4x4_dup(object.mat_transform_model, traverse_data.objects[i].matrix_position);
+        vec4_dup(object.color, traverse_data.objects[i].color);
 
-        ogl_data_traverse.objects.push_back(object);
+        ogl_traverse_data.objects.push_back(object);
     }
 
-    ogl_rendering_loop(window, program, ogl_data_traverse.objects.data(), data_traverse.objects.size());
+    ogl_rendering_loop(window, program, ogl_traverse_data.objects.data(), traverse_data.objects.size());
 
     /////////////////////////////////////////////
     // Clean up all window and graphics resources

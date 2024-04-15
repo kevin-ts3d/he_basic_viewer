@@ -28,11 +28,11 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // Recursive tree traversal function used to retrieve drawable entities
-void he_traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, TraverseData* const data_traverse, size_t depth);
+void he_traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, TraverseData* const traverse_data, size_t depth);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Utility function to convert A3DMiscTransformation object to 4x4 transform matrix
-void he_extract_transformation(A3DTreeNode* const hnd_node, mat4x4 mat_result);
+void he_extract_position(A3DTreeNode* const hnd_node, mat4x4 mat_result);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Utility function to get the net color of an entity
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 {
 
  
-    TraverseData     data_traverse;    //structure to store all the data required for rendering
+    TraverseData     traverse_data;    //structure to store all the data required for rendering
 
     //Next section uses HOOPS Exchange to import and extract the data
     {
@@ -57,7 +57,6 @@ int main(int argc, char* argv[])
         assert(he_loader.m_eSDKStatus == A3D_SUCCESS);
 
         A3DImport he_import(HE_DATA_DIRECTORY INPUT_FILE);
-        he_import.m_sLoadData.m_sTessellation.m_eTessellationLevelOfDetail = kA3DTessLODExtraLow;
         A3DStatus status = he_loader.Import(he_import);
         assert(status == A3D_SUCCESS);
         A3DAsmModelFile* model_file = he_loader.m_psModelFile;
@@ -75,7 +74,7 @@ int main(int argc, char* argv[])
         assert(status == A3D_SUCCESS);
 
 
-        he_traverse_tree(hnd_tree, hnd_root_node, &data_traverse, 0);
+        he_traverse_tree(hnd_tree, hnd_root_node, &traverse_data, 0);
        
         A3DTreeCompute(0, &hnd_tree, 0);
     }      
@@ -83,7 +82,7 @@ int main(int argc, char* argv[])
 
 
     //Sending the data to a rendering engine
-    send_to_openGL(data_traverse);
+    send_to_openGL(traverse_data);
    
     return EXIT_SUCCESS;
 }
@@ -95,7 +94,7 @@ int main(int argc, char* argv[])
 // - Dump the model tree information
 // - Extracts any geometry as A3DMeshData 
 // - Recursively calls itself on the child nodes
-void he_traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, TraverseData* const data_traverse, size_t depth)
+void he_traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, TraverseData* const traverse_data, size_t depth)
 {
 
     //Start node dump
@@ -134,10 +133,10 @@ void he_traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, Trav
 
     if (code == A3D_SUCCESS) {
         MeshObject object;
-        he_extract_transformation(hnd_node, object.mat_transform_model);
+        he_extract_position(hnd_node, object.matrix_position);
         he_extract_color(hnd_node, object.color);
         object.mesh = mesh_data;
-        data_traverse->objects.push_back(object);
+        traverse_data->objects.push_back(object);
     }
 
     //end of node dump
@@ -150,63 +149,11 @@ void he_traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, Trav
     code = A3DTreeNodeGetChildren(hnd_tree, hnd_node, &n_children, &hnd_children);
     assert(code == A3D_SUCCESS);
     for (size_t c = 0; c < n_children; ++c) {
-        he_traverse_tree(hnd_tree, hnd_children[c], data_traverse, depth+1);
+        he_traverse_tree(hnd_tree, hnd_children[c], traverse_data, depth+1);
     }
     A3DTreeNodeGetChildren(0, 0, &n_children, &hnd_children);
 }
 
-// Function to set text color in Windows console using RGB values
-void SetConsoleTextColorRGB(float r, float g, float b)
-{
-#ifdef _WINDOWS
-    // Define a lookup table of standard colors
-    COLORREF colors[] = {
-        RGB(0, 0, 0),       // Black
-        RGB(0, 0, 128),     // Dark Blue
-        RGB(0, 128, 0),     // Dark Green
-        RGB(0, 128, 128),   // Dark Cyan
-        RGB(128, 0, 0),     // Dark Red
-        RGB(128, 0, 128),   // Dark Magenta
-        RGB(128, 128, 0),   // Dark Yellow
-        RGB(192, 192, 192), // Light Grey
-        RGB(128, 128, 128), // Dark Grey
-        RGB(0, 0, 255),     // Blue
-        RGB(0, 255, 0),     // Green
-        RGB(0, 255, 255),   // Cyan
-        RGB(255, 0, 0),     // Red
-        RGB(255, 0, 255),   // Magenta
-        RGB(255, 255, 0),   // Yellow
-        RGB(255, 255, 255)  // White
-    };
-
-    // Find the closest color in the palette
-    float minDistance = FLT_MAX;
-    int closestIndex = 0;
-    for (int i = 0; i < sizeof(colors) / sizeof(COLORREF); ++i) {
-        float dr = GetRValue(colors[i]) - r * 255.0f;
-        float dg = GetGValue(colors[i]) - g * 255.0f;
-        float db = GetBValue(colors[i]) - b * 255.0f;
-        float distance = dr * dr + dg * dg + db * db;
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestIndex = i;
-        }
-    }
-
-    // Set the text color using the closest color in the palette
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), closestIndex);
-#endif
-}
-
-
-// Function to reset color in Windows Console
-void ReSetConsoleColorRGB()
-{
-#ifdef _WINDOWS
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(hConsole,  FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-#endif
-}
 
 void he_extract_color(A3DTreeNode* const hnd_node, vec4 color_result)
 {
@@ -221,9 +168,7 @@ void he_extract_color(A3DTreeNode* const hnd_node, vec4 color_result)
         A3D_INITIALIZE_DATA(A3DGraphRgbColorData, color);
         if (A3DGlobalGetGraphRgbColorData(node_style.m_uiRgbColorIndex, &color) == A3D_SUCCESS) {
 
-            SetConsoleTextColorRGB(color.m_dRed, color.m_dGreen, color.m_dBlue);
             std::cout << "RGB(" << color.m_dRed << ";" << color.m_dGreen << ";" << color.m_dBlue << ")";
-            ReSetConsoleColorRGB();
 
             color_result[0] = color.m_dRed;
             color_result[1] = color.m_dGreen;
@@ -242,7 +187,7 @@ void he_extract_color(A3DTreeNode* const hnd_node, vec4 color_result)
     }
 }
 
-void he_extract_transformation(A3DTreeNode* const hnd_node, mat4x4 mat_result)
+void he_extract_position(A3DTreeNode* const hnd_node, mat4x4 mat_result)
 {
     //Extract the net transformation for the node
     A3DMiscTransformation* hnd_net_transform = 0;
